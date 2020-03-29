@@ -49,4 +49,12 @@ def upload_raw_data(img_path, table_path, names):
     return data
 
 
+def load_data(path):
+    data = np.load(path)
+    X = data['images']
+    y = data['ages']
+    g = data['genders']
+    return X, y, g
+
+
          

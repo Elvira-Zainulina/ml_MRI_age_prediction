@@ -83,6 +83,7 @@ class S500MRI_Dataset_simple(Dataset):
 class ImbalancedDatasetSampler(Sampler):
     #function is taken from https://github.com/ufoym/imbalanced-dataset-sampler
     """
+    function is taken from https://github.com/ufoym/imbalanced-dataset-sampler
     Samples elements randomly from a given list of indices for imbalanced dataset
     
     :param indices (list, optional): a list of indices
