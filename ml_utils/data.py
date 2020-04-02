@@ -1,8 +1,10 @@
+import numpy as np
 import torchio
 import torch
 from torch.utils.data import Dataset
 from torch.utils.data.sampler import Sampler
 from .preprocessing import process_ages, map_gender
+from .preprocessing import regroup_ages
 
 
 class S500MRI_Dataset(torchio.ImagesDataset):
@@ -54,14 +56,20 @@ class S500MRI_Dataset_simple(Dataset):
               images,
               genders,
               ages=None,
-              transform=None
+              transform=None,
+              group_ages=False
               ):
         self.X = images.squeeze(1).transpose(0, 2, 1, 3)
         self.genders = torch.tensor(genders, dtype=torch.float32)
         if ages is None:
             self.ages = None
         else:
-            self.ages = torch.tensor(ages, dtype=torch.long)
+            if group_ages:
+                self.ages = regroup_ages(ages)
+            else:
+                self.ages = ages
+                
+            self.ages = torch.tensor(self.ages, dtype=torch.long)
 
         self.transform = transform
 
@@ -91,7 +99,8 @@ class ImbalancedDatasetSampler(Sampler):
     :param callback_get_label func: a callback-like function which takes two arguments - dataset and index
     """
 
-    def __init__(self, dataset, indices=None, num_samples=None, callback_get_label=None):
+    def __init__(self, dataset, indices=None, num_samples=None, 
+                 callback_get_label=None, limit_p=False):
                 
         # if indices is not provided, 
         # all elements in the dataset will be considered
@@ -115,10 +124,16 @@ class ImbalancedDatasetSampler(Sampler):
             else:
                 label_to_count[label] = 1
                 
+        mean_v = np.mean(list(label_to_count.values()))
         # weight for each sample
-        weights = [1.0 / label_to_count[self._get_label(dataset, idx)]
-                   for idx in self.indices]
+        if limit_p:
+            weights = [min(1.0 / label_to_count[self._get_label(dataset, idx)], mean_v)
+                       for idx in self.indices]
+        else:
+            weights = [1.0 / label_to_count[self._get_label(dataset, idx)]
+                       for idx in self.indices]
         self.weights = torch.DoubleTensor(weights)
+        self.weights /= torch.sum(self.weights)
 
     def _get_label(self, dataset, idx):
         return dataset.ages[idx].item()

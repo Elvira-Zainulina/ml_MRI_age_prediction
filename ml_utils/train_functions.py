@@ -3,6 +3,7 @@ import torch
 import matplotlib.pyplot as plt
 from IPython.display import clear_output
 from tqdm.notebook import tqdm
+from sklearn.metrics import f1_score
 
 def set_random_seeds(seed_value=0, device='cpu'):
     '''source https://forums.fast.ai/t/solved-reproducibility-where-is-the-randomness-coming-in/31628/5'''
@@ -16,12 +17,35 @@ def set_random_seeds(seed_value=0, device='cpu'):
         torch.backends.cudnn.benchmark = False
         
 
+def training_plot(losses, losses_dev, f1_scores, 
+                  f1_scores_dev, out_path=None):
+    
+    f, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 4))
+    ax1.plot(losses, lw=3, label='train')
+    ax1.plot(losses_dev, lw=3, label='validation')
+    ax1.set_ylabel('Loss', fontsize=14)
+    ax1.set_xlabel('num_of_epoch', fontsize=14)
+    ax2.plot(f1_scores, lw=3, label='train')
+    ax2.plot(f1_scores_dev, lw=3, label='validation')
+    ax2.set_ylabel('F1-score', fontsize=14)
+    ax2.set_xlabel('num_of_epoch', fontsize=14)
+    ax1.grid()
+    ax2.grid()
+    ax1.legend(fontsize=14, loc=1)
+    ax2.legend(fontsize=14, loc=4)
+    if out_path:
+        plt.savefig(out_path)
+    plt.show()
+    
+
 def train_epoch(dataloader, model, optimizer, loss_fn, 
                 scheduler=None, device='cpu'):
     
     model.train()
     train_loss = 0
-    train_acc = 0
+#     train_acc = 0
+    train_preds = []
+    train_labels = []
     for i, sample in tqdm(enumerate(dataloader)):
         img, gender, age = sample
         img = img.to(device)
@@ -32,19 +56,25 @@ def train_epoch(dataloader, model, optimizer, loss_fn,
         output = model(img, gender)
         loss = loss_fn(output, age)
         train_loss += loss.item()
-        train_acc += (output.argmax(1) == age).sum().float() / output.shape[0]
+        train_preds.append(output.argmax(1).cpu().numpy())
+        train_labels.append(age.cpu().numpy())
+#         f1 = f1_score(age.cpu(), o)
+#         train_acc += (output.argmax(1) == age).sum().float() / output.shape[0]
         loss.backward()
         optimizer.step()
         if scheduler is not None:
             scheduler.step()
-
-    return train_loss / (i + 1), train_acc / (i + 1)
+    train_preds = np.concatenate(train_preds)
+    train_labels = np.concatenate(train_labels)
+    return train_loss / (i + 1), f1_score(train_labels, train_preds, average='micro') #train_acc / (i + 1)
 
 
 def test(dataloader, model, loss_fn, device='cpu'):
     model.eval()
     test_loss = 0
-    test_acc = 0
+#     test_acc = 0
+    test_preds = []
+    test_labels = []
     for i, sample in tqdm(enumerate(dataloader)):
         img, gender, age = sample
         img = img.to(device)
@@ -53,9 +83,13 @@ def test(dataloader, model, loss_fn, device='cpu'):
         
         output = model(img, gender)
         test_loss += loss_fn(output, age).item()
-        test_acc += (output.argmax(1) == age).sum().float() / output.shape[0]
+#         test_acc += (output.argmax(1) == age).sum().float() / output.shape[0]
+        test_preds.append(output.argmax(1).cpu().numpy())
+        test_labels.append(age.cpu().numpy())
+    test_preds = np.concatenate(test_preds)
+    test_labels = np.concatenate(test_labels)
 
-    return test_loss / (i + 1), test_acc / (i + 1)
+    return test_loss / (i + 1), f1_score(test_labels, test_preds, average='micro') #test_acc / (i + 1)
 
 
 def train(train_dataloader, val_dataloader,
@@ -66,49 +100,38 @@ def train(train_dataloader, val_dataloader,
           
     losses = []
     losses_dev = []
-    accuracies = []
-    accuracies_dev = []
+    f1_scores = []
+    f1_scores_dev = []
     
     for epoch in range(epochs):
-        train_loss, train_acc = train_epoch(train_dataloader, model, optimizer,
-                                            loss_fn=loss_fn, scheduler=scheduler,
-                                            device=device)
+        train_loss, train_f1 = train_epoch(train_dataloader, model, optimizer,
+                                           loss_fn=loss_fn, scheduler=scheduler,
+                                           device=device)
         
-        val_loss, val_acc = test(val_dataloader, model, loss_fn=loss_fn,
-                                 device=device)
+        val_loss, val_f1 = test(val_dataloader, model, loss_fn=loss_fn,
+                                device=device)
         
         losses.append(train_loss)
         losses_dev.append(val_loss)
-        accuracies.append(train_acc)
-        accuracies_dev.append(val_acc)             
+        f1_scores.append(train_f1)
+        f1_scores_dev.append(val_f1)             
         
         if draw:
             
             clear_output(wait=True)
-            f, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 4))
-            ax1.plot(losses, lw=3, label='train')
-            ax1.plot(losses_dev, lw=3, label='dev')
-            ax1.set_ylabel('Loss', fontsize=14)
-            ax1.set_xlabel('num_of_epoch', fontsize=14)
-            ax2.plot(accuracies, lw=3, label='train')
-            ax2.plot(accuracies_dev, lw=3, label='dev')
-            ax2.set_ylabel('Accuracy', fontsize=14)
-            ax2.set_xlabel('num_of_epoch', fontsize=14)
-            ax1.legend(fontsize=14, loc=1)
-            ax2.legend(fontsize=14, loc=4)
-            plt.show()
+            training_plot(losses, losses_dev, f1_scores, f1_scores_dev)
         
         if verbose:
             print(('Epoch {}: train_loss {:.4f}, val_loss {:.4f} \t'+\
-                   'train_accuracy {:.4f}, val_accuracy {:.4f} ').format(
+                   'train_f1_score {:.4f}, val_f1_score {:.4f} ').format(
                     epoch, losses[-1], losses_dev[-1],
-                    accuracies[-1], accuracies_dev[-1]))
+                    f1_scores[-1], f1_scores_dev[-1]))
             
         if (epoch + 1) % 10 == 0:
             torch.save(model, output_clf)
     
     print('Finished training.')
-    return losses, losses_dev, accuracies, accuracies_dev
+    return losses, losses_dev, f1_scores, f1_scores_dev
 
 
 def train_epoch_VAE(dataloader, model, optimizer,
@@ -117,7 +140,9 @@ def train_epoch_VAE(dataloader, model, optimizer,
     
     model.train()
     train_loss = 0
-    train_acc = 0
+#     train_acc = 0
+    train_preds = []
+    train_labels = []
     for i, sample in tqdm(enumerate(dataloader)):
         img, gender, age = sample
         img = img.to(device)
@@ -134,19 +159,25 @@ def train_epoch_VAE(dataloader, model, optimizer,
         vae_loss = reconstr_loss + kl_loss + label_loss
 
         train_loss += (vae_loss).item()
-        train_acc += (a_mean.argmax(1) == age).sum().float() / age.shape[0]
+        train_preds.append(a_mean.argmax(1).cpu().numpy())
+        train_labels.append(age.cpu().numpy())
+#         train_acc += (a_mean.argmax(1) == age).sum().float() / age.shape[0]
         vae_loss.backward()
         optimizer.step()
         if scheduler is not None:
             scheduler.step()
+    train_preds = np.concatenate(train_preds)
+    train_labels = np.concatenate(train_labels)
 
-    return train_loss / (i + 1), train_acc / (i + 1)
+    return train_loss / (i + 1), f1_score(train_labels, train_preds, average='micro') #train_acc / (i + 1)
 
 
 def test_VAE(dataloader, model, mse_loss, cross_entropy, device='cpu'):
     model.eval()
     test_loss = 0
-    test_acc = 0
+#     test_acc = 0
+    test_preds = []
+    test_labels = []
     for i, sample in tqdm(enumerate(dataloader)):
         img, gender, age = sample
         img = img.to(device)
@@ -162,9 +193,13 @@ def test_VAE(dataloader, model, mse_loss, cross_entropy, device='cpu'):
         vae_loss = reconstr_loss + kl_loss + label_loss
 
         test_loss += vae_loss.item()
-        test_acc += (a_mean.argmax(1) == age).sum().float() / age.shape[0]
+#         test_acc += (a_mean.argmax(1) == age).sum().float() / age.shape[0]
+        test_preds.append(a_mean.argmax(1).cpu().numpy())
+        test_labels.append(age.cpu().numpy())
+    test_preds = np.concatenate(test_preds)
+    test_labels = np.concatenate(test_labels)
 
-    return test_loss / (i + 1), test_acc / (i + 1)
+    return test_loss / (i + 1), f1_score(test_labels, test_preds, average='micro') #test_acc / (i + 1)
 
 
 def train_VAE(train_dataloader, val_dataloader, model, 
@@ -174,46 +209,35 @@ def train_VAE(train_dataloader, val_dataloader, model,
           
     losses = []
     losses_dev = []
-    accuracies = []
-    accuracies_dev = []
+    f1_scores = []
+    f1_scores_dev = []
     
     for epoch in range(epochs):
-        train_loss, train_acc = train_epoch_VAE(train_dataloader, model, optimizer,
-                                                mse_loss, cross_entropy,
-                                                scheduler=scheduler, device=device)
+        train_loss, train_f1 = train_epoch_VAE(train_dataloader, model, optimizer,
+                                               mse_loss, cross_entropy,
+                                               scheduler=scheduler, device=device)
         
-        val_loss, val_acc = test_VAE(val_dataloader, model, mse_loss, 
-                                     cross_entropy, device=device)
+        val_loss, val_f1 = test_VAE(val_dataloader, model, mse_loss, 
+                                    cross_entropy, device=device)
         
         losses.append(train_loss)
         losses_dev.append(val_loss)
-        accuracies.append(train_acc)
-        accuracies_dev.append(val_acc)             
+        f1_scores.append(train_f1)
+        f1_scores_dev.append(val_f1)             
         
         if draw:
             
             clear_output(wait=True)
-            f, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 4))
-            ax1.plot(losses, lw=3, label='train')
-            ax1.plot(losses_dev, lw=3, label='dev')
-            ax1.set_ylabel('Loss', fontsize=14)
-            ax1.set_xlabel('num_of_epoch', fontsize=14)
-            ax2.plot(accuracies, lw=3, label='train')
-            ax2.plot(accuracies_dev, lw=3, label='dev')
-            ax2.set_ylabel('Accuracy', fontsize=14)
-            ax2.set_xlabel('num_of_epoch', fontsize=14)
-            ax1.legend(fontsize=14, loc=1)
-            ax2.legend(fontsize=14, loc=4)
-            plt.show()
+            training_plot(losses, losses_dev, f1_scores, f1_scores_dev)
         
         if verbose:
             print(('Epoch {}: train_loss {:.4f}, val_loss {:.4f} \t'+\
-                   'train_accuracy {:.4f}, val_accuracy {:.4f} ').format(
+                   'train_f1_score {:.4f}, val_f1_score {:.4f} ').format(
                     epoch, losses[-1], losses_dev[-1],
-                    accuracies[-1], accuracies_dev[-1]))
+                    f1_scores[-1], f1_scores_dev[-1]))
             
         if (epoch + 1) % 10 == 0:
             torch.save(model, output_clf)
     
     print('Finished training.')
-    return losses, losses_dev, accuracies, accuracies_dev
+    return losses, losses_dev, f1_scores, f1_scores_dev

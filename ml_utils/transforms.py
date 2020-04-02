@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import torchio
 from torchio.transforms.transform import Transform
@@ -5,6 +6,19 @@ from .preprocessing import cut_img
 from .preprocessing import rescale_crop_img, rescale_pad_img
 
 
+class RandomFlip(object):
+
+    def __init__(self, axis=0, p=0.5):
+        self.axis = axis
+        self.p = p
+
+    def __call__(self, image):
+
+        if np.random.random() < self.p:
+            return torch.flip(image, [self.axis])
+        return image
+
+    
 class ResizeCrop(Transform):
     def __init__(
             self,

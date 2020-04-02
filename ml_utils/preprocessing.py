@@ -22,6 +22,10 @@ def process_ages(ages):
     return np.array(list(map(lambda x: lab2num[x], ages)))
 
 
+def regroup_ages(ages):
+    return np.array(list(map(lambda x: x if x < 3 else 2, ages)))
+
+
 def cut_img_mask(img):
     mask = np.ones_like(img)
     condition = (np.sum(img, axis=(0, 2)) == 0)
