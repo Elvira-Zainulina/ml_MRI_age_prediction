@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from IPython.display import clear_output
 from tqdm.notebook import tqdm
 from sklearn.metrics import f1_score
+from torch.utils.data import DataLoader
 
 def set_random_seeds(seed_value=0, device='cpu'):
     '''source https://forums.fast.ai/t/solved-reproducibility-where-is-the-randomness-coming-in/31628/5'''
@@ -134,6 +135,30 @@ def train(train_dataloader, val_dataloader,
     return losses, losses_dev, f1_scores, f1_scores_dev
 
 
+def predict(model, data, device='cpu'):
+    model.eval()
+    
+    predictions = []
+    
+    dataloader = DataLoader(data, batch_size=20, 
+                            shuffle=False, num_workers=4)
+    for sample in tqdm(dataloader):
+        if len(sample) == 3:
+            img, gender, _ = sample
+        else:
+            img, gender = sample
+            
+        img = img.to(device)
+        gender = gender.to(device)
+        
+        output = model(img, gender)
+        predictions.append(output.argmax(1).cpu().numpy())
+        
+    predictions = np.concatenate(predictions)
+
+    return predictions
+
+
 def train_epoch_VAE(dataloader, model, optimizer,
                     mse_loss, cross_entropy,
                     scheduler=None, device='cpu'):
@@ -241,3 +266,27 @@ def train_VAE(train_dataloader, val_dataloader, model,
     
     print('Finished training.')
     return losses, losses_dev, f1_scores, f1_scores_dev
+
+
+def predict_VAE(model, data, device='cpu'):
+    model.eval()
+    
+    predictions = []
+    
+    dataloader = DataLoader(data, batch_size=20, 
+                            shuffle=False, num_workers=4)
+    for sample in tqdm(dataloader):
+        if len(sample) == 3:
+            img, gender, _ = sample
+        else:
+            img, gender = sample
+            
+        img = img.to(device)
+        gender = gender.to(device)
+        
+        a_mean, _, _, _, _, _, _ = model(img, gender)
+        predictions.append(a_mean.argmax(1).cpu().numpy())
+        
+    predictions = np.concatenate(predictions)
+
+    return predictions

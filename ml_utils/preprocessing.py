@@ -12,7 +12,7 @@ from tqdm.notebook import tqdm
 
 lab2num = {'22-25': 0, '26-30': 1, '31-35': 2, '36+': 3}
 num2lab = {0: '22-25', 1: '26-30', 2: '31-35', 3: '36+'}
-
+num2gender = {0: 'M', 1: 'F'}
 
 def map_gender(genders):
     return np.array(list(map(lambda x: 1 if x=='F' else 0, genders)))
@@ -23,7 +23,7 @@ def process_ages(ages):
 
 
 def regroup_ages(ages):
-    return np.array(list(map(lambda x: x if x < 3 else 2, ages)))
+    return np.array(list(map(lambda x: 0 if x < 2 else 1, ages)))
 
 
 def cut_img_mask(img):
