@@ -19,3 +19,6 @@ and **tabular datasets:** 'Behavioral Data' and 'Expanded FreeSurfer Data' https
 ## Feature importance for image data
 
 ## Feature importance for tabular data
+
+## Related projects
+[torchio](https://github.com/fepegar/torchio)
