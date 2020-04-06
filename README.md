@@ -40,6 +40,3 @@ The experiments carried out on the tabular data are in the ```notebooks/tables``
 ## Feature importance for image data
 ![](/pictures/GRAD-CAM.png)
  Visualization of the feature maps of the trained model using Grad-CAM. The usage example is shown in the ```notebooks/images/Grad_CAM.ipynb```.
- 
-## Feature importance for tabular data
-![](/pictures/fi.png)
