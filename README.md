@@ -14,8 +14,8 @@ In this work we explore various ML approaches of age estimation from brain struc
 ## Libraries
 
 ## Dataset
-We used **image dataset** 'WU-Minn HCP Data - 1200 Subjects', 'S900 new subjects' https://db.humanconnectome.org/app/action/DownloadPackagesAction, 
-and **tabular datasets** 'Behavioral Data' and 'Expanded FreeSurfer Data' https://db.humanconnectome.org/data/projects/HCP_1200
+We used **image dataset:** 'WU-Minn HCP Data - 1200 Subjects', 'S900 new subjects' https://db.humanconnectome.org/app/action/DownloadPackagesAction, 
+and **tabular datasets:** 'Behavioral Data' and 'Expanded FreeSurfer Data' https://db.humanconnectome.org/data/projects/HCP_1200
 ## Feature importance for image data
 
 ## Feature importance for tabular data
