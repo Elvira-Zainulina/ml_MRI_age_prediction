@@ -18,7 +18,8 @@ We used **image dataset:** 'WU-Minn HCP Data - 1200 Subjects', 'S900 new subject
 and **tabular datasets:** 'Behavioral Data' and 'Expanded FreeSurfer Data' https://db.humanconnectome.org/data/projects/HCP_1200
 ## Feature importance for image data
 ![](/pictures/GRAD-CAM.png)
+ Resultingmasks for correctly predicted MR scans for 3D CNN usedfor2-class classification,  VAE-C used for2and4-classclassifications. The results showthat the 3D CNN model performs inadequate and the VAE-C models are most likely to be underfitted but the VAE-Cmodel can already determine important areas in the brain.
 ## Feature importance for tabular data
-
+![](/pictures/fi.png)
 ## Related projects
 [torchio](https://github.com/fepegar/torchio)
