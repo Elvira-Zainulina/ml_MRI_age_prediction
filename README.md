@@ -22,4 +22,4 @@ and **tabular datasets:** 'Behavioral Data' and 'Expanded FreeSurfer Data' https
 ## Feature importance for tabular data
 ![](/pictures/fi.png)
 ## Related projects
-[torchio](https://github.com/fepegar/torchio)
+**[torchio](https://github.com/fepegar/torchio)**
